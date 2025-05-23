@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام دعم الدكتورة اكتفاء</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/leaflet-heat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.4.7/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Rubik:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Rubik', sans-serif;
+      background: #f7fafc;
+      min-height: 100vh;
+      margin: 0;
+      color: #2d3748;
+      font-size: 16px;
+    }
+    body.dark-mode {
+      background: #1a202c;
+      color: #e2e8f0;
+    }
+    h1, h2, h3 {
+      font-family: 'Amiri', serif;
+    }
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(90deg, #2f855a, #4a5568);
+      color: #fff;
+      padding: 1rem 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+    }
+    .navbar img {
+      height: 40px;
+      border-radius: 50%;
+    }
+    .navbar h1 {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .progress-bar {
+      width: 200px;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .progress-bar div {
+      height: 100%;
+      background: #d69e2e;
+      transition: width 0.5s ease;
+    }
+    .sidebar {
+      position: fixed;
+      top: 64px;
+      right: -300px;
+      width: 300px;
+      height: calc(100% - 64px);
+      background: #fff;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+      transition: right 0.3s ease;
+      z-index: 999;
+    }
+    .sidebar.open {
+      right: 0;
+    }
+    body.dark-mode .sidebar {
+      background: #2d3748;
+    }
+    .sidebar ul {
+      list-style: none;
+      padding: 1rem;
+      margin: 0;
+    }
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      color: #2d3748;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+    }
+    body.dark-mode .sidebar a {
+      color: #e2e8f0;
+    }
+    .sidebar a:hover, .sidebar a.active {
+      background: #d69e2e;
+      color: #fff;
+    }
+    .container {
+      max-width: 1600px;
+      margin: 80px auto 20px;
+      padding: 1.5rem;
+      transition: margin-right 0.3s ease;
+    }
+    .container.shifted {
+      margin-right: 320px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), inset 0 0 10px rgba(0, 0, 0, 0.02);
+      transition: transform 0.3s ease;
+      animation: fadeIn 0.5s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    body.dark-mode .card {
+      background: #2d3748;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+    .dashboard-card {
+      background: linear-gradient(135deg, #2f855a, #68d391);
+      color: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+    .dashboard-card:hover {
+      transform: scale(1.05);
+    }
+    .dashboard-card i {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .floating-action-btn {
+      position: fixed;
+      bottom: 2rem;
+      left: 2rem;
+      background: #d69e2e;
+      color: #fff;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+    .floating-action-btn:hover {
+      transform: scale(1.1);
+    }
+    .floating-menu {
+      position: fixed;
+      bottom: 5rem;
+      left: 2rem;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      display: none;
+      flex-direction: column;
+      padding: 0.5rem;
+      z-index: 999;
+    }
+    body.dark-mode .floating-menu {
+      background: #2d3748;
+    }
+    .floating-menu.show {
+      display: flex;
+    }
+    .floating-menu button {
+      background: none;
+      color: #2f855a;
+      padding: 0.75rem;
+      text-align: right;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-radius: 8px;
+      transition: background 0.2s ease;
+    }
+    body.dark-mode .floating-menu button {
+      color: #e2e8f0;
+    }
+    .floating-menu button:hover {
+      background: #d69e2e;
+      color: #fff;
+    }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.show {
+      display: flex;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      animation: slideIn 0.3s ease;
+    }
+    body.dark-mode .modal-content {
+      background: #2d3748;
+    }
+    input, select, textarea {
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #d69e2e;
+      box-shadow: 0 0 0 3px rgba(214, 158, 46, 0.2);
+      outline: none;
+    }
+    body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+      background: #2d3748;
+      color: #e2e8f0;
+      border-color: #4a5568;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    button:hover {
+      transform: translateY(-2px);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 1rem;
+      text-align: right;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      background: #f7fafc;
+      font-weight: 500;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      cursor: pointer;
+    }
+    th:hover {
+      background: #e2e8f0;
+    }
+    body.dark-mode th {
+      background: #2d3748;
+    }
+    tr:hover {
+      background: #f7fafc;
+    }
+    body.dark-mode tr:hover {
+      background: #2d3748;
+    }
+    #map {
+      height: 400px;
+      border-radius: 12px;
+      display: none;
+    }
+    #map.show {
+      display: block;
+    }
+    .notification {
+      position: fixed;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      display: none;
+      transition: opacity 0.3s ease;
+    }
+    .notification.show {
+      display: flex;
+      opacity: 1;
+    }
+    .notification.success {
+      background: #2f855a;
+      color: #fff;
+    }
+    .notification.error {
+      background: #e53e3e;
+      color: #fff;
+    }
+    .notification .close {
+      cursor: pointer;
+      margin-left: 1rem;
+      font-weight: bold;
+    }
+    .loading {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      z-index: 1000;
+      animation: pulse 1.5s infinite;
+    }
+    .whatsapp-btn {
+      background: #25D366;
+      color: #fff;
+      padding: 0.5rem;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .whatsapp-btn:hover {
+      background: #20b358;
+    }
+    .chart-container {
+      max-height: 400px;
+      overflow: hidden;
+      transition: max-height 0.5s ease;
+    }
+    .login-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    .login-card {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      max-width: 400px;
+      width: 90%;
+    }
+    body.dark-mode .login-card {
+      background: #2d3748;
+    }
+    .message-preview {
+      border: 1px solid #e2e8f0;
+      padding: 1rem;
+      border-radius: 8px;
+      background: #f7fafc;
+      margin-top: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    body.dark-mode .message-preview {
+      background: #2d3748;
+      border-color: #4a5568;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes pulse {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.05); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+    @media (min-width: 1024px) {
+      .sidebar {
+        right: 0;
+        width: 300px;
+      }
+      .container {
+        margin-right: 320px;
+      }
+      .navbar h1 {
+        font-size: 1.8rem;
+      }
+    }
+    @media (max-width: 640px) {
+      .navbar {
+        padding: 0.75rem 1rem;
+      }
+      .navbar h1 {
+        font-size: 1.2rem;
+      }
+      .container {
+        padding: 1rem;
+      }
+      .card {
+        padding: 1rem;
+      }
+      .progress-bar {
+        width: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loginContainer" class="login-container">
+    <div class="login-card">
+      <h2 class="text-xl font-bold text-center mb-4">تسجيل الدخول</h2>
+      <input id="loginCode" type="password" placeholder="أدخل رمز الدخول">
+      <button class="bg-green-700 text-white w-full mt-4" onclick="checkLogin()">تسجيل الدخول</button>
+    </div>
+  </div>
+  <div class="navbar">
+    <h1><img src="https://via.placeholder.com/40" alt="اكتفاء"> دعم الدكتورة اكتفاء</h1>
+    <div class="flex items-center gap-3">
+      <div class="progress-bar"><div id="campaignProgress" style="width: 0%"></div></div>
+      <input id="quickSearch" type="text" placeholder="بحث سريع..." class="px-3 py-2 rounded-lg hidden md:block">
+      <button class="bg-yellow-600 text-white px-3 py-2 rounded-lg" onclick="openAddVoterModal()"><i class="fas fa-user-plus"></i></button>
+      <button class="bg-green-500 text-white px-3 py-2 rounded-lg" onclick="openBulkMessageModal()"><i class="fab fa-whatsapp"></i></button>
+      <button class="bg-green-700 text-white px-3 py-2 rounded-lg md:hidden" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    </div>
+  </div>
+  <div class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="#dashboard" class="active" onclick="showSection('dashboard')"><i class="fas fa-home"></i> لوحة التحكم</a></li>
+      <li><a href="#voters" onclick="showSection('voters')"><i class="fas fa-users"></i> الناخبين</a></li>
+      <li><a href="#duplicates" onclick="showSection('duplicates')"><i class="fas fa-clone"></i> التكرارات</a></li>
+      <li><a href="#invalid" onclick="showSection('invalid')"><i class="fas fa-exclamation-triangle"></i> الأرقام الخاطئة</a></li>
+      <li><a href="#map" onclick="showSection('map')"><i class="fas fa-map-marked-alt"></i> الخريطة الحرارية</a></li>
+      <li><a href="#reports" onclick="showSection('reports')"><i class="fas fa-chart-pie"></i> التقارير</a></li>
+      <li><a href="#templates" onclick="showSection('templates')"><i class="fas fa-envelope"></i> قوالب الرسائل</a></li>
+      <li><a href="#schedule" onclick="showSection('schedule')"><i class="fas fa-clock"></i> جدولة الرسائل</a></li>
+      <li><a href="#sentiment" onclick="showSection('sentiment')"><i class="fas fa-comment-dots"></i> تحليل المشاعر</a></li>
+      <li><a href="#" onclick="toggleDarkMode()"><i class="fas fa-moon"></i> الوضع الليلي</a></li>
+      <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+    </ul>
+  </div>
+  <div class="container" id="mainContainer">
+    <div id="dashboard" class="section">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-home mr-2"></i>لوحة تحكم الحملة</h3>
+        <div class="dashboard-grid">
+          <div class="dashboard-card">
+            <i class="fas fa-users"></i>
+            <h4>إجمالي الناخبين</h4>
+            <span id="totalVoters">0</span>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-clone"></i>
+            <h4>التكرارات</h4>
+            <span id="duplicatesCount">0</span>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h4>أرقام خاطئة</h4>
+            <span id="invalidCount">0</span>
+          </div>
+          <div class="dashboard-card">
+            <i class="fas fa-envelope"></i>
+            <h4>الرسائل المرسلة</h4>
+            <span id="sentMessages">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-chart-bar mr-2"></i>توزيع الناخبين حسب المناطق</h3>
+        <div class="chart-container">
+          <canvas id="regionChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div id="voters" class="section hidden">
+      <div class="card">
+        <div class="flex flex-col sm:flex-row gap-4 mb-4">
+          <input id="searchInput" type="text" placeholder="ابحث بالاسم أو رقم الناخب">
+          <select id="regionFilter">
+            <option value="">جميع المناطق</option>
+          </select>
+          <select id="notesFilter">
+            <option value="">جميع الملاحظات</option>
+            <option value="دعم">دعم</option>
+            <option value="متردد">متردد</option>
+            <option value="رفض">رفض</option>
+            <option value="بدون">بدون ملاحظات</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('name')">الاسم <i class="fas fa-sort"></i></th>
+              <th onclick="sortTable('voterNumber')">رقم الناخب <i class="fas fa-sort"></i></th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="votersTable"></tbody>
+        </table>
+        <div class="flex justify-center gap-4 mt-4">
+          <button id="prevPage" class="bg-green-700 text-white disabled:bg-gray-400"><i class="fas fa-chevron-right"></i></button>
+          <button id="nextPage" class="bg-green-700 text-white disabled:bg-gray-400"><i class="fas fa-chevron-left"></i></button>
+        </div>
+      </div>
+    </div>
+    <div id="duplicates" class="section hidden">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-clone mr-2"></i>التكرارات</h3>
+        <select id="duplicateType" class="mb-4">
+          <option value="">جميع التكرارات</option>
+          <option value="name">الاسم</option>
+          <option value="voterNumber">رقم الناخب</option>
+          <option value="phone">رقم الهاتف</option>
+        </select>
+        <table>
+          <thead>
+            <tr>
+              <th>النوع</th>
+              <th>القيمة</th>
+              <th>العدد</th>
+              <th>الأسماء</th>
+              <th>اقتراح</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="duplicatesTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="invalid" class="section hidden">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-exclamation-triangle mr-2"></i>أرقام خاطئة</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>رقم الناخب</th>
+              <th>رقم الهاتف</th>
+              <th>اقتراح</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="invalidTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="map" class="section hidden">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-map-marked-alt mr-2"></i>خريطة حرارية للناخبين</h3>
+        <div id="map"></div>
+      </div>
+    </div>
+    <div id="reports" class="section hidden">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-chart-pie mr-2"></i>تقارير الحملة</h3>
+        <button class="bg-yellow-600 text-white mb-4" onclick="generatePDFReport()"><i class="fas fa-file-pdf mr-2"></i> تنزيل تقرير PDF</button>
+        <div class="chart-container">
+          <canvas id="notesChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div id="templates" class="section hidden">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-envelope mr-2"></i>قوالب الرسائل</h3>
+        <div class="flex gap-4 mb-4">
+          <input id="templateName" type="text" placeholder="اسم القالب">
+          <textarea id="templateText" class="h-24" placeholder="نص القالب..."></textarea>
+          <button class="bg-green-700 text-white" onclick="saveTemplate()">حفظ القالب</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>اسم القالب</th>
+              <th>النص</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="templatesTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="schedule" class="section hidden">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-clock mr-2"></i>جدولة الرسائل</h3>
+        <div class="flex flex-col gap-4 mb-4">
+          <select id="scheduleTemplate">
+            <option value="">اختر قالب الرسالة</option>
+          </select>
+          <input id="scheduleDate" type="datetime-local">
+          <button class="bg-green-700 text-white" onclick="scheduleMessage()">جدولة الإرسال</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>القالب</th>
+              <th>التاريخ</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="scheduleTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="sentiment" class="section hidden">
+      <div class="card">
+        <h3 class="text-lg font-semibold mb-4"><i class="fas fa-comment-dots mr-2"></i>تحليل المشاعر</h3>
+        <div class="chart-container">
+          <canvas id="sentimentChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="floating-action-btn" onclick="toggleFloatingMenu()">
+    <i class="fas fa-plus"></i>
+  </div>
+  <div class="floating-menu" id="floatingMenu">
+    <button onclick="openAddVoterModal()"><i class="fas fa-user-plus"></i> إضافة ناخب</button>
+    <button onclick="generateQuickReport()"><i class="fas fa-chart-bar"></i> تحليل سريع</button>
+    <button onclick="exportData('excel')"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+    <button onclick="exportData('csv')"><i class="fas fa-file-csv"></i> تصدير CSV</button>
+    <button onclick="analyzeSentiment()"><i class="fas fa-comment-dots"></i> تحليل المشاعر</button>
+  </div>
+  <div id="addVoterModal" class="modal">
+    <div class="modal-content">
+      <h3 class="text-lg font-semibold mb-4"><i class="fas fa-user-plus mr-2"></i>إضافة ناخب</h3>
+      <input id="addName" type="text" placeholder="الاسم">
+      <input id="addPhone" type="text" placeholder="رقم الهاتف (+964)">
+      <input id="addVoterNumber" type="text" placeholder="رقم الناخب">
+      <input id="addAddress" type="text" placeholder="العنوان">
+      <input id="addNotes" type="text" placeholder="ملاحظات (دعم، متردد، رفض)">
+      <div class="flex justify-end gap-4 mt-4">
+        <button class="bg-gray-500 text-white" onclick="closeAddVoterModal()">إلغاء</button>
+        <button class="bg-green-700 text-white" onclick="addVoter()">إضافة</button>
+      </div>
+    </div>
+  </div>
+  <div id="bulkMessageModal" class="modal">
+    <div class="modal-content">
+      <h3 class="text-lg font-semibold mb-4"><i class="fab fa-whatsapp mr-2"></i>رسالة جماعية</h3>
+      <select id="messageFilter" class="mb-4">
+        <option value="">جميع الناخبين</option>
+        <option value="region">حسب المنطقة</option>
+        <option value="notes">حسب الملاحظات</option>
+      </select>
+      <select id="regionSelect" class="mb-4 hidden">
+        <option value="">اختر المنطقة</option>
+      </select>
+      <select id="notesSelect" class="mb-4 hidden">
+        <option value="">اختر الملاحظات</option>
+        <option value="دعم">دعم</option>
+        <option value="متردد">متردد</option>
+        <option value="رفض">رفض</option>
+        <option value="بدون">بدون ملاحظات</option>
+      </select>
+      <select id="messageTemplate" class="mb-4">
+        <option value="">اختر قالب الرسالة</option>
+      </select>
+      <textarea id="messageText" class="w-full h-24 p-3 border rounded-lg" placeholder="نص الرسالة..."></textarea>
+      <div class="message-preview" id="messagePreview"></div>
+      <div class="flex justify-end gap-4 mt-4">
+        <button class="bg-gray-500 text-white" onclick="closeBulkMessageModal()">إلغاء</button>
+        <button class="bg-green-500 text-white" onclick="sendBulkMessages()">إرسال</button>
+      </div>
+    </div>
+  </div>
+  <div id="notification" class="notification"><i id="notificationIcon" class="mr-2"></i><span id="notificationMessage"></span><span class="close" onclick="closeNotification()">×</span></div>
+  <div id="loading" class="loading"><i class="fas fa-spinner fa-spin mr-2"></i>جارٍ التحميل...</div>
+  <script>
+   // إعدادات البيانات والمتغيرات
+let voters = [], filteredVoters = [], currentPage = 1, rowsPerPage = 10;
+let regionChart, notesChart, sentimentChart, map, sentMessages = new Set(), recentUpdates = [];
+let templates = {}, scheduledMessages = [];
+let sortColumn = 'name', sortDirection = 'asc';
+let isLoggedIn = false;
+
+const defaultTemplates = {
+  campaign: 'نشكر دعمكم وثقتكم بالدكتورة اكتفاء الحسناوي، مستمرون معكم لخدمة أهلنا وتحقيق الأفضل بإذن الله. صوّت لـ [الاسم] يوم [التاريخ]! 🗳️',
+  volunteer: 'مرحبًا [الاسم]، انضم لفريق الدكتورة اكتفاء الحسناوي كمتطوع! تواصل معنا. 💪',
+  update: 'مرحبًا [الاسم]، تحديث من حملة الدكتورة اكتفاء: رقم الناخب [رقم الناخب] جاهز! 📢'
+};
+
+const baghdadRegions = {
+  'الكرخ': { lat: 33.3152, lng: 44.3661, color: '#2f855a' },
+  'الرصافة': { lat: 33.3297, lng: 44.4305, color: '#d69e2e' },
+  'المنصور': { lat: 33.3178, lng: 44.3472, color: '#4a5568' },
+  'غير محدد': { lat: 33.3152, lng: 44.3661, color: '#718096' }
+};
+
+// وظائف الأدوات الأساسية
+function showNotification(msg, type = 'success', icon = 'fas fa-info-circle') {
+  const n = document.getElementById('notification');
+  n.querySelector('#notificationMessage').textContent = msg;
+  n.querySelector('#notificationIcon').className = `${icon} mr-2`;
+  n.className = `notification ${type}`;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 4000);
+}
+
+function checkLogin() {
+  const code = DOMPurify.sanitize(document.getElementById('loginCode').value);
+  if (code === 'hasan') {
+    isLoggedIn = true;
+    document.getElementById('loginContainer').style.display = 'none';
+    fetchData();
+    showNotification('تم تسجيل الدخول! ✅', 'success', 'fas fa-check-circle');
+  } else {
+    showNotification('رمز الدخول غير صحيح! 🚫', 'error', 'fas fa-exclamation-circle');
+  }
+}
+
+function logout() {
+  isLoggedIn = false;
+  document.getElementById('loginContainer').style.display = 'flex';
+  document.getElementById('loginCode').value = '';
+  showNotification('تم تسجيل الخروج! 👋', 'success', 'fas fa-sign-out-alt');
+}
+
+function toggleDarkMode() {
+  if (!isLoggedIn) return;
+  document.body.classList.toggle('dark-mode');
+  showNotification(document.body.classList.contains('dark-mode') ? 'الوضع الليلي مفعل! 🌙' : 'الوضع النهاري مفعل! ☀️', 'success', 'fas fa-adjust');
+}
+
+function toggleSidebar() {
+  if (!isLoggedIn) return;
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('open');
+  document.getElementById('mainContainer').classList.toggle('shifted');
+}
+
+function toggleFloatingMenu() {
+  if (!isLoggedIn) return;
+  document.getElementById('floatingMenu').classList.toggle('show');
+}
+
+function showSection(sectionId) {
+  if (!isLoggedIn) return;
+  document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+  document.getElementById(sectionId).classList.remove('hidden');
+  document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+  document.querySelector(`.sidebar a[href="#${sectionId}"]`).classList.add('active');
+  if (sectionId === 'duplicates') updateDuplicates();
+  if (sectionId === 'invalid') updateInvalid();
+  if (sectionId === 'map' && !map) initMap();
+  if (sectionId === 'templates') updateTemplates();
+  if (sectionId === 'schedule') updateSchedule();
+  if (sectionId === 'sentiment') analyzeSentiment();
+  toggleSidebar();
+}
+
+// وظائف معالجة البيانات
+function formatPhone(phone) {
+  if (!phone) return '';
+  const clean = phone.replace(/[^\d]/g, '');
+  return clean.length === 10 ? `+964${clean}` : phone;
+}
+
+function normalizePhone(phone) {
+  if (!phone) return '';
+  const clean = phone.replace(/[^\d]/g, '');
+  return clean.startsWith('964') ? clean : `964${clean}`;
+}
+
+function validatePhone(phone) {
+  return phone.match(/^\+964[0-9]{9}$/) ? 'صالح' : 'غير صالح';
+}
+
+async function fetchData() {
+  if (!isLoggedIn) return;
+  document.getElementById('loading').style.display = 'block';
+  try {
+    const res = await fetch('https://script.google.com/macros/s/AKfycbx5CyfMcuQwGmnQ2NC6xWtQ6-im4iWFr57GK9Sgwbx9CPQrrRcs-OM53zVLfsuGCo0e-g/exec');
+    const data = await res.json();
+    voters = data.slice(1).map((row, i) => ({
+      timestamp: String(row[0] || '').trim(),
+      name: String(row[1] || '').trim(),
+      phone: formatPhone(String(row[2] || '').trim()),
+      voterNumber: String(row[3] || '').trim(),
+      address: String(row[4] || 'غير محدد').trim(),
+      notes: String(row[5] || '').trim(),
+      row: i + 2
+    }));
+    filteredVoters = [...voters];
+    Object.assign(templates, defaultTemplates);
+    updateDashboard();
+    populateTable();
+    populateFilters();
+    updateDuplicates();
+    updateInvalid();
+    updateCharts();
+    updateCampaignProgress();
+    showNotification('تم جلب البيانات! ✅', 'success', 'fas fa-check-circle');
+  } catch (e) {
+    showNotification('خطأ في جلب البيانات! 🚫', 'error', 'fas fa-exclamation-circle');
+  }
+  document.getElementById('loading').style.display = 'none';
+}
+
+// وظائف لوحة التحكم
+function updateCampaignProgress() {
+  const targetVoters = 10000;
+  const progress = Math.min((filteredVoters.length / targetVoters) * 100, 100);
+  document.getElementById('campaignProgress').style.width = `${progress}%`;
+}
+
+function updateDashboard() {
+  document.getElementById('totalVoters').textContent = filteredVoters.length;
+  const duplicates = getDuplicates();
+  document.getElementById('duplicatesCount').textContent = duplicates.length;
+  const invalid = filteredVoters.filter(v => v.voterNumber && v.voterNumber.replace(/[^\d]/g, '').length !== 8 || validatePhone(v.phone) === 'غير صالح').length;
+  document.getElementById('invalidCount').textContent = invalid;
+  document.getElementById('sentMessages').textContent = sentMessages.size;
+}
+
+function populateTable() {
+  const table = document.getElementById('votersTable');
+  table.innerHTML = '';
+  const start = (currentPage - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
+  filteredVoters.slice(start, end).forEach(v => {
+    const whatsappNumber = normalizePhone(v.phone);
+    table.innerHTML += `
+      <tr>
+        <td>${DOMPurify.sanitize(v.name)}</td>
+        <td>${DOMPurify.sanitize(v.voterNumber)}</td>
+        <td>
+          <button class="bg-green-700 text-white px-2 py-1 rounded" onclick="openEditModal(${v.row}, '${DOMPurify.sanitize(v.name)}', '${DOMPurify.sanitize(v.phone)}', '${DOMPurify.sanitize(v.voterNumber)}', '${DOMPurify.sanitize(v.address)}', '${DOMPurify.sanitize(v.notes)}')"><i class="fas fa-edit"></i></button>
+          <a href="https://wa.me/${whatsappNumber}?text=نشكر دعمكم وثقتكم بالدكتورة اكتفاء الحسناوي، تواصلوا معنا! 🗳️" target="_blank" class="whatsapp-btn ml-2"><i class="fab fa-whatsapp"></i></a>
+        </td>
+      </tr>`;
+  });
+  document.getElementById('prevPage').disabled = currentPage === 1;
+  document.getElementById('nextPage').disabled = end >= filteredVoters.length;
+}
+
+function populateFilters() {
+  const regions = [...new Set(voters.map(v => v.address.split(/[,;]/)[0].trim() || 'غير محدد'))];
+  const regionFilter = document.getElementById('regionFilter');
+  const regionSelect = document.getElementById('regionSelect');
+  regionFilter.innerHTML = '<option value="">جميع المناطق</option>' + regions.map(r => `<option value="${DOMPurify.sanitize(r)}">${DOMPurify.sanitize(r)}</option>`).join('');
+  regionSelect.innerHTML = '<option value="">اختر المنطقة</option>' + regions.map(r => `<option value="${DOMPurify.sanitize(r)}">${DOMPurify.sanitize(r)}</option>`).join('');
+  const templateSelect = document.getElementById('messageTemplate');
+  const scheduleTemplate = document.getElementById('scheduleTemplate');
+  templateSelect.innerHTML = '<option value="">اختر قالب الرسالة</option>' + Object.keys(templates).map(k => `<option value="${k}">${DOMPurify.sanitize(k)}</option>`).join('');
+  scheduleTemplate.innerHTML = '<option value="">اختر قالب الرسالة</option>' + Object.keys(templates).map(k => `<option value="${k}">${DOMPurify.sanitize(k)}</option>`).join('');
+}
+
+function updateCharts() {
+  const regions = [...new Set(voters.map(v => v.address.split(/[,;]/)[0].trim() || 'غير محدد'))];
+  const regionCounts = regions.map(r => filteredVoters.filter(v => (v.address.split(/[,;]/)[0].trim() || 'غير محدد') === r).length);
+  if (regionChart) regionChart.destroy();
+  regionChart = new Chart(document.getElementById('regionChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: regions,
+      datasets: [{ label: 'عدد الناخبين', data: regionCounts, backgroundColor: '#d69e2e', borderColor: '#b7791f', borderWidth: 1 }]
+    },
+    options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+  });
+  const notesCounts = {
+    'دعم': filteredVoters.filter(v => v.notes.toLowerCase().includes('دعم')).length,
+    'متردد': filteredVoters.filter(v => v.notes.toLowerCase().includes('متردد')).length,
+    'رفض': filteredVoters.filter(v => v.notes.toLowerCase().includes('رفض')).length,
+    'بدون': filteredVoters.filter(v => !v.notes.trim()).length
+  };
+  if (notesChart) notesChart.destroy();
+  notesChart = new Chart(document.getElementById('notesChart').getContext('2d'), {
+    type: 'pie',
+    data: {
+      labels: ['دعم', 'متردد', 'رفض', 'بدون ملاحظات'],
+      datasets: [{ data: Object.values(notesCounts), backgroundColor: ['#2f855a', '#d69e2e', '#e53e3e', '#e2e8f0'], borderColor: '#fff', borderWidth: 2 }]
+    },
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 14 } } } } }
+  });
+}
+
+function initMap() {
+  map = L.map('map').setView([33.3152, 44.3661], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+  const heatPoints = filteredVoters.map(v => {
+    const region = v.address.split(/[,;]/)[0].trim() || 'غير محدد';
+    const coords = baghdadRegions[region] || baghdadRegions['غير محدد'];
+    return [coords.lat + (Math.random() - 0.5) * 0.02, coords.lng + (Math.random() - 0.5) * 0.02, 0.5];
+  });
+  L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 17 }).addTo(map);
+}
+
+function filterTable() {
+  const search = DOMPurify.sanitize(document.getElementById('searchInput').value.toLowerCase());
+  const region = DOMPurify.sanitize(document.getElementById('regionFilter').value);
+  const notes = DOMPurify.sanitize(document.getElementById('notesFilter').value);
+  filteredVoters = voters.filter(v => {
+    const r = v.address.split(/[,;]/)[0].trim() || 'غير محدد';
+    return (
+      (v.name.toLowerCase().includes(search) || v.voterNumber.includes(search)) &&
+      (region === '' || r === region) &&
+      (notes === '' || 
+       (notes === 'دعم' && v.notes.toLowerCase().includes('دعم')) ||
+       (notes === 'متردد' && v.notes.toLowerCase().includes('متردد')) ||
+       (notes === 'رفض' && v.notes.toLowerCase().includes('رفض')) ||
+       (notes === 'بدون' && !v.notes.trim()))
+    );
+  });
+  currentPage = 1;
+  updateDashboard();
+  populateTable();
+  updateCharts();
+  updateCampaignProgress();
+  if (map) initMap();
+}
+
+function sortTable(column) {
+  if (sortColumn === column) {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn = column;
+    sortDirection = 'asc';
+  }
+  filteredVoters.sort((a, b) => {
+    const valA = a[sortColumn].toLowerCase();
+    const valB = b[sortColumn].toLowerCase();
+    return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+  });
+  populateTable();
+}
+
+// الأدوات الجديدة
+function getDuplicates() {
+  const duplicates = [], phoneDups = {}, voterDups = {}, nameDups = {};
+  voters.forEach(v => {
+    if (v.phone) phoneDups[v.phone] = (phoneDups[v.phone] || []).concat(v);
+    if (v.voterNumber) voterDups[v.voterNumber] = (voterDups[v.voterNumber] || []).concat(v);
+    if (v.name) nameDups[v.name] = (nameDups[v.name] || []).concat(v);
+  });
+  Object.entries(phoneDups).forEach(([phone, vs]) => { if (vs.length > 1) duplicates.push({ type: 'رقم الهاتف', value: phone, count: vs.length, voters: vs, suggestion: 'دمج أو حذف' }); });
+  Object.entries(voterDups).forEach(([voterNumber, vs]) => { if (vs.length > 1) duplicates.push({ type: 'رقم الناخب', value: voterNumber, count: vs.length, voters: vs, suggestion: 'التحقق من الهوية' }); });
+  Object.entries(nameDups).forEach(([name, vs]) => { if (vs.length > 1) duplicates.push({ type: 'الاسم', value: name, count: vs.length, voters: vs, suggestion: 'التأكد من التكرار' }); });
+  return duplicates;
+}
+
+function updateDuplicates() {
+  const table = document.getElementById('duplicatesTable');
+  table.innerHTML = '';
+  const filter = DOMPurify.sanitize(document.getElementById('duplicateType').value);
+  const duplicates = getDuplicates().filter(d => !filter || (filter === 'name' && d.type === 'الاسم') || (filter === 'voterNumber' && d.type === 'رقم الناخب') || (filter === 'phone' && d.type === 'رقم الهاتف'));
+  duplicates.forEach(d => {
+    const names = d.voters.map(v => DOMPurify.sanitize(v.name)).join(', ');
+    table.innerHTML += `
+      <tr>
+        <td>${DOMPurify.sanitize(d.type)}</td>
+        <td>${DOMPurify.sanitize(d.value)}</td>
+        <td>${d.count}</td>
+        <td>${names}</td>
+        <td>${DOMPurify.sanitize(d.suggestion)}</td>
+        <td>
+          ${d.type === 'رقم الناخب' ? d.voters.map(v => `
+            <a href="https://wa.me/${normalizePhone(v.phone)}?text=مرحبًا ${DOMPurify.sanitize(v.name)}، رقم الناخب (${DOMPurify.sanitize(v.voterNumber)}) متكرر، تواصل مع حملة الدكتورة اكتفاء! 🗳️" target="_blank" class="whatsapp-btn"><i class="fab fa-whatsapp"></i></a>
+          `).join(' ') : ''}
+        </td>
+      </tr>`;
+  });
+  if (duplicates.length === 0) table.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد تكرارات</td></tr>';
+}
+
+function updateInvalid() {
+  const table = document.getElementById('invalidTable');
+  table.innerHTML = '';
+  const invalid = filteredVoters.filter(v => v.voterNumber && v.voterNumber.replace(/[^\d]/g, '').length !== 8 || validatePhone(v.phone) === 'غير صالح');
+  invalid.forEach(v => {
+    const phoneStatus = validatePhone(v.phone);
+    const suggestion = phoneStatus === 'غير صالح' ? 'تصحيح رقم الهاتف' : 'تصحيح رقم الناخب';
+    table.innerHTML += `
+      <tr>
+        <td>${DOMPurify.sanitize(v.name)}</td>
+        <td>${DOMPurify.sanitize(v.voterNumber)}</td>
+        <td>${DOMPurify.sanitize(v.phone)}</td>
+        <td>${DOMPurify.sanitize(suggestion)}</td>
+        <td>
+          <a href="https://wa.me/${normalizePhone(v.phone)}?text=مرحبًا ${DOMPurify.sanitize(v.name)}، يرجى تصحيح بياناتك لدعم الدكتورة اكتفاء! 🗳️" target="_blank" class="whatsapp-btn"><i class="fab fa-whatsapp"></i></a>
+        </td>
+      </tr>`;
+  });
+  if (invalid.length === 0) table.innerHTML = '<tr><td colspan="5" class="text-center">لا توجد أرقام خاطئة</td></tr>';
+}
+
+function analyzeSentiment() {
+  const sentimentCounts = { positive: 0, neutral: 0, negative: 0 };
+  filteredVoters.forEach(v => {
+    const notes = v.notes.toLowerCase();
+    if (notes.includes('دعم') || notes.includes('إيجابي')) sentimentCounts.positive++;
+    else if (notes.includes('رفض') || notes.includes('سلبي') || notes.includes('مشكلة')) sentimentCounts.negative++;
+    else sentimentCounts.neutral++;
+  });
+  if (sentimentChart) sentimentChart.destroy();
+  sentimentChart = new Chart(document.getElementById('sentimentChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['إيجابي', 'محايد', 'سلبي'],
+      datasets: [{ data: Object.values(sentimentCounts), backgroundColor: ['#2f855a', '#d69e2e', '#e53e3e'], borderColor: '#fff', borderWidth: 2 }]
+    },
+    options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 14 } } } } }
+  });
+  showNotification('تم تحليل المشاعر! ✅', 'success', 'fas fa-comment-dots');
+}
+
+function openAddVoterModal() {
+  if (!isLoggedIn) return;
+  document.getElementById('addVoterModal').classList.add('show');
+  document.getElementById('addName').value = '';
+  document.getElementById('addPhone').value = '';
+  document.getElementById('addVoterNumber').value = '';
+  document.getElementById('addAddress').value = '';
+  document.getElementById('addNotes').value = '';
+}
+
+function closeAddVoterModal() {
+  document.getElementById('addVoterModal').classList.remove('show');
+}
+
+async function addVoter() {
+  if (!isLoggedIn) return;
+  document.getElementById('loading').style.display = 'block';
+  try {
+    const phone = formatPhone(DOMPurify.sanitize(document.getElementById('addPhone').value.trim()));
+    if (phone && validatePhone(phone) === 'غير صالح') throw new Error('رقم هاتف غير صالح!');
+    const data = {
+      action: 'add',
+      timestamp: new Date().toISOString(),
+      name: DOMPurify.sanitize(document.getElementById('addName').value),
+      phone,
+      voterNumber: DOMPurify.sanitize(document.getElementById('addVoterNumber').value),
+      address: DOMPurify.sanitize(document.getElementById('addAddress').value),
+      notes: DOMPurify.sanitize(document.getElementById('addNotes').value)
+    };
+    const res = await fetch('https://script.google.com/macros/s/AKfycbwoAqCR5PDtftYAtreKF4T90zCqtOPUyqOcAeDEdla-Lsfcj3ET32knqrFNBrYmyPes7Q/exec', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (result.error) throw new Error(result.error);
+    recentUpdates.unshift(`تم إضافة ناخب: ${data.name} (${new Date().toLocaleString('ar-EG')})`);
+    showNotification('تم إضافة الناخب! ✅', 'success', 'fas fa-user-plus');
+    closeAddVoterModal();
+    fetchData();
+  } catch (e) {
+    showNotification('خطأ في الإضافة: ' + e.message + ' 🚫', 'error', 'fas fa-exclamation-circle');
+  }
+  document.getElementById('loading').style.display = 'none';
+}
+
+function openBulkMessageModal() {
+  if (!isLoggedIn) return;
+  document.getElementById('bulkMessageModal').classList.add('show');
+  document.getElementById('messageText').value = '';
+  document.getElementById('messagePreview').textContent = '';
+  document.getElementById('messageTemplate').value = '';
+  document.getElementById('messageFilter').addEventListener('change', () => {
+    const filter = document.getElementById('messageFilter').value;
+    document.getElementById('regionSelect').classList.toggle('hidden', filter !== 'region');
+    document.getElementById('notesSelect').classList.toggle('hidden', filter !== 'notes');
+  });
+  document.getElementById('messageTemplate').addEventListener('change', () => {
+    const template = document.getElementById('messageTemplate').value;
+    if (template) {
+      document.getElementById('messageText').value = templates[template].replace('[التاريخ]', new Date().toLocaleDateString('ar-EG'));
+      document.getElementById('messagePreview').innerHTML = DOMPurify.sanitize(document.getElementById('messageText').value.replace(/\[الاسم\]/g, 'اسم الناخب').replace(/\[رقم الناخب\]/g, '12345678'));
+    }
+  });
+  document.getElementById('messageText').addEventListener('input', () => {
+    document.getElementById('messagePreview').innerHTML = DOMPurify.sanitize(document.getElementById('messageText').value.replace(/\[الاسم\]/g, 'اسم الناخب').replace(/\[رقم الناخب\]/g, '12345678'));
+  });
+}
+
+function closeBulkMessageModal() {
+  document.getElementById('bulkMessageModal').classList.remove('show');
+}
+
+async function sendBulkMessages() {
+  if (!isLoggedIn) return;
+  const filter = DOMPurify.sanitize(document.getElementById('messageFilter').value);
+  const region = DOMPurify.sanitize(document.getElementById('regionSelect').value);
+  const notes = DOMPurify.sanitize(document.getElementById('notesSelect').value);
+  const message = DOMPurify.sanitize(document.getElementById('messageText').value);
+  if (!message) {
+    showNotification('يرجى إدخال نص الرسالة! 🚫', 'error', 'fas fa-exclamation-circle');
+    return;
+  }
+  let recipients = [...filteredVoters];
+  if (filter === 'region' && region) {
+    recipients = recipients.filter(v => (v.address.split(/[,;]/)[0].trim() || 'غير محدد') === region);
+  } else if (filter === 'notes' && notes) {
+    recipients = recipients.filter(v => 
+      (notes === 'دعم' && v.notes.toLowerCase().includes('دعم')) ||
+      (notes === 'متردد' && v.notes.toLowerCase().includes('متردد')) ||
+      (notes === 'رفض' && v.notes.toLowerCase().includes('رفض')) ||
+      (notes === 'بدون' && !v.notes.trim())
+    );
+  }
+  if (recipients.length === 0) {
+    showNotification('لا يوجد مستلمين! 🚫', 'error', 'fas fa-exclamation-circle');
+    return;
+  }
+  document.getElementById('loading').style.display = 'block';
+  let sentCount = 0, failedCount = 0;
+  for (let i = 0; i < recipients.length; i += 10) {
+    const batch = recipients.slice(i, i + 10);
+    for (const voter of batch) {
+      if (!voter.phone || validatePhone(voter.phone) === 'غير صالح') {
+        failedCount++;
+        continue;
+      }
+      const whatsappNumber = normalizePhone(voter.phone);
+      const messageKey = `${voter.voterNumber}-${voter.phone}`;
+      if (sentMessages.has(messageKey)) {
+        failedCount++;
+        continue;
+      }
+      const formattedMessage = message
+        .replace('[الاسم]', voter.name)
+        .replace('[رقم الناخب]', voter.voterNumber)
+        .replace('[التاريخ]', new Date().toLocaleDateString('ar-EG'));
+      try {
+        window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(formattedMessage)}`, '_blank');
+        sentMessages.add(messageKey);
+        sentCount++;
+        recentUpdates.unshift(`تم إرسال رسالة إلى ${voter.name} (${new Date().toLocaleString('ar-EG')})`);
+      } catch (e) {
+        failedCount++;
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+  document.getElementById('loading').style.display = 'none';
+  closeBulkMessageModal();
+  showNotification(`تم إرسال ${sentCount} رسالة، فشل ${failedCount}! ✅`, 'success', 'fas fa-check-circle');
+  updateDashboard();
+}
+
+function saveTemplate() {
+  if (!isLoggedIn) return;
+  const name = DOMPurify.sanitize(document.getElementById('templateName').value);
+  const text = DOMPurify.sanitize(document.getElementById('templateText').value);
+  if (!name || !text) {
+    showNotification('يرجى إدخال اسم ونص القالب! 🚫', 'error', 'fas fa-exclamation-circle');
+    return;
+  }
+  templates[name] = text;
+  updateTemplates();
+  populateFilters();
+  showNotification('تم حفظ القالب! ✅', 'success', 'fas fa-envelope');
+}
+
+function updateTemplates() {
+  const table = document.getElementById('templatesTable');
+  table.innerHTML = '';
+  Object.entries(templates).forEach(([name, text]) => {
+    table.innerHTML += `
+      <tr>
+        <td>${DOMPurify.sanitize(name)}</td>
+        <td>${DOMPurify.sanitize(text)}</td>
+        <td>
+          <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="deleteTemplate('${name}')"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>`;
+  });
+}
+
+function deleteTemplate(name) {
+  if (!isLoggedIn) return;
+  delete templates[name];
+  updateTemplates();
+  populateFilters();
+  showNotification('تم حذف القالب! ✅', 'success', 'fas fa-trash');
+}
+
+function scheduleMessage() {
+  if (!isLoggedIn) return;
+  const template = DOMPurify.sanitize(document.getElementById('scheduleTemplate').value);
+  const date = document.getElementById('scheduleDate').value;
+  if (!template || !date) {
+    showNotification('يرجى اختيار قالب وتاريخ! 🚫', 'error', 'fas fa-exclamation-circle');
+    return;
+  }
+  const scheduleTime = new Date(date).getTime();
+  if (scheduleTime < Date.now()) {
+    showNotification('التاريخ يجب أن يكون في المستقبل! 🚫', 'error', 'fas fa-exclamation-circle');
+    return;
+  }
+  scheduledMessages.push({ template, date: scheduleTime, status: 'مجدول' });
+  setTimeout(() => {
+    sendScheduledMessage(template);
+    scheduledMessages.find(m => m.template === template && m.date === scheduleTime).status = 'مرسل';
+    updateSchedule();
+  }, scheduleTime - Date.now());
+  updateSchedule();
+  showNotification('تم جدولة الرسالة! ✅', 'success', 'fas fa-clock');
+}
+
+async function sendScheduledMessage(template) {
+  const message = templates[template];
+  let recipients = [...filteredVoters];
+  let sentCount = 0, failedCount = 0;
+  for (let i = 0; i < recipients.length; i += 10) {
+    const batch = recipients.slice(i, i + 10);
+    for (const voter of batch) {
+      if (!voter.phone || validatePhone(voter.phone) === 'غير صالح') {
+        failedCount++;
+        continue;
+      }
+      const whatsappNumber = normalizePhone(voter.phone);
+      const messageKey = `${voter.voterNumber}-${voter.phone}`;
+      if (sentMessages.has(messageKey)) {
+        failedCount++;
+        continue;
+      }
+      const formattedMessage = message
+        .replace('[الاسم]', voter.name)
+        .replace('[رقم الناخب]', voter.voterNumber)
+        .replace('[التاريخ]', new Date().toLocaleDateString('ar-EG'));
+      try {
+        window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(formattedMessage)}`, '_blank');
+        sentMessages.add(messageKey);
+        sentCount++;
+        recentUpdates.unshift(`تم إرسال رسالة مجدولة إلى ${voter.name} (${new Date().toLocaleString('ar-EG')})`);
+      } catch (e) {
+        failedCount++;
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+  showNotification(`تم إرسال ${sentCount} رسالة مجدولة، فشل ${failedCount}! ✅`, 'success', 'fas fa-check-circle');
+  updateDashboard();
+}
+
+function updateSchedule() {
+  const table = document.getElementById('scheduleTable');
+  table.innerHTML = '';
+  scheduledMessages.forEach((m, i) => {
+    table.innerHTML += `
+      <tr>
+        <td>${DOMPurify.sanitize(m.template)}</td>
+        <td>${new Date(m.date).toLocaleString('ar-EG')}</td>
+        <td>${DOMPurify.sanitize(m.status)}</td>
+        <td>
+          <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="cancelScheduledMessage(${i})"><i class="fas fa-trash"></i></button>
+        </td>
+      </tr>`;
+  });
+}
+
+function cancelScheduledMessage(index) {
+  if (!isLoggedIn) return;
+  scheduledMessages.splice(index, 1);
+  updateSchedule();
+  showNotification('تم إلغاء الجدولة! ✅', 'success', 'fas fa-trash');
+}
+
+function generateQuickReport() {
+  if (!isLoggedIn) return;
+  const duplicates = getDuplicates();
+  const invalid = filteredVoters.filter(v => v.voterNumber && v.voterNumber.replace(/[^\d]/g, '').length !== 8 || validatePhone(v.phone) === 'غير صالح').length;
+  const report = `تقرير حملة الدكتورة اكتفاء (${new Date().toLocaleString('ar-EG')}):\n- إجمالي الناخبين: ${filteredVoters.length}\n- التكرارات: ${duplicates.length}\n- أرقام خاطئة: ${invalid}\n- الرسائل المرسلة: ${sentMessages.size}`;
+  alert(DOMPurify.sanitize(report));
+  recentUpdates.unshift(`تم إنشاء تقرير سريع (${new Date().toLocaleString('ar-EG')})`);
+  updateDashboard();
+}
+
+function generatePDFReport() {
+  if (!isLoggedIn) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFont('Amiri');
+  doc.setFontSize(16);
+  doc.text('تقرير حملة الدكتورة اكتفاء الحسناوي', 105, 20, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text(`التاريخ: ${new Date().toLocaleString('ar-EG')}`, 105, 30, { align: 'center' });
+  doc.text(`إجمالي الناخبين: ${filteredVoters.length}`, 20, 50);
+  doc.text(`التكرارات: ${getDuplicates().length}`, 20, 60);
+  doc.text(`أرقام خاطئة: ${filteredVoters.filter(v => v.voterNumber && v.voterNumber.replace(/[^\d]/g, '').length !== 8 || validatePhone(v.phone) === 'غير صالح').length}`, 20, 70);
+  doc.text(`الرسائل المرسلة: ${sentMessages.size}`, 20, 80);
+  doc.save(`تقرير_اكتفاء_${new Date().toISOString().slice(0, 10)}.pdf`);
+  showNotification('تم تنزيل تقرير PDF! ✅', 'success', 'fas fa-file-pdf');
+}
+
+function exportData(format) {
+  if (!isLoggedIn) return;
+  const data = filteredVoters.map(v => ({
+    الاسم: v.name,
+    'رقم الهاتف': v.phone,
+    'رقم الناخب': v.voterNumber,
+    العنوان: v.address,
+    الملاحظات: v.notes
+  }));
+  if (format === 'excel') {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الناخبين');
+    XLSX.writeFile(wb, `ناخبو_اكتفاء_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  } else if (format === 'csv') {
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `ناخبو_اكتفاء_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+  }
+  showNotification(`تم تصدير البيانات بصيغة ${format.toUpperCase()}! ✅`, 'success', 'fas fa-file-export');
+}
+
+// ربط الأحداث
+document.getElementById('quickSearch').addEventListener('input', filterTable);
+document.getElementById('searchInput').addEventListener('input', filterTable);
+document.getElementById('regionFilter').addEventListener('change', filterTable);
+document.getElementById('notesFilter').addEventListener('change', filterTable);
+document.getElementById('duplicateType').addEventListener('change', updateDuplicates);
+document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 1) { currentPage--; populateTable(); } });
+document.getElementById('nextPage').addEventListener('click', () => { if ((currentPage * rowsPerPage) < filteredVoters.length) { currentPage++; populateTable(); } });
+ </script>
+</body>
+</html>
